@@ -20,7 +20,6 @@ public class GeneradorFrase {
         
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < numeroPalabras; i++) {
-            // Usamos palabras de diferentes dominios para variedad
             String palabra;
             int tipo = faker.random().nextInt(3);
             switch (tipo) {
@@ -35,7 +34,6 @@ public class GeneradorFrase {
                     break;
             }
             
-            // Limpiar la palabra (quitar espacios si es compuesta, acentos opcionalmente)
             palabra = palabra.replaceAll("\\s+", "").toLowerCase();
             
             sb.append(palabra);
