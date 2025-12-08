@@ -4,6 +4,7 @@ import com.safepass.gen.ConfiguracionPassword;
 import com.safepass.gen.ConfiguracionFrase;
 import com.safepass.misc.EvaluadorCalidad;
 import com.safepass.misc.NivelSeguridad;
+import com.safepass.misc.VulnerabilityCheck;
 import com.safepass.manager.PasswordManager;
 import com.safepass.manager.PasswordEntry;
 import com.safepass.manager.Categoria;
@@ -30,9 +31,11 @@ public class Main {
             System.out.println("\n=== SAFEPASS GENERATOR ===");
             System.out.println("1. Generar nueva contraseña");
             System.out.println("2. Ver contraseñas guardadas");
-            System.out.println("3. Evaluar seguridad");
-            System.out.println("4. Gestor de Contraseñas (Modificar/Eliminar)");
-            System.out.println("5. Salir");
+            System.out.println("3. Evaluar seguridad (Local)");
+            System.out.println("4. Verificar contraseña filtrada (Online)");
+            System.out.println("5. Verificar correo filtrado (Requiere API Key)");
+            System.out.println("6. Gestor de Contraseñas (Modificar/Eliminar)");
+            System.out.println("7. Salir");
             System.out.print("Seleccione una opción: ");
 
             String input = scanner.nextLine();
@@ -48,9 +51,15 @@ public class Main {
                     opcionEvaluar(scanner);
                     break;
                 case "4":
-                    opcionGestor(scanner, manager);
+                    opcionVerificarVulnerabilidad(scanner);
                     break;
                 case "5":
+                    opcionVerificarCorreo(scanner);
+                    break;
+                case "6":
+                    opcionGestor(scanner, manager);
+                    break;
+                case "7":
                     salir = true;
                     System.out.println("¡Hasta luego!");
                     break;
@@ -286,6 +295,48 @@ public class Main {
         EvaluadorCalidad evaluador = new EvaluadorCalidad();
         NivelSeguridad nivel = evaluador.evaluar(password);
         System.out.println("Nivel de seguridad: " + nivel);
+    }
+
+    private static void opcionVerificarVulnerabilidad(Scanner scanner) {
+        System.out.print("\nIngrese la contraseña a verificar en HIBP: ");
+        String password = scanner.nextLine();
+        System.out.println("Verificando si la contraseña ha sido filtrada en brechas de datos...");
+        try {
+            VulnerabilityCheck vulnCheck = new VulnerabilityCheck();
+            int pwnCount = vulnCheck.checkPassword(password);
+            if (pwnCount > 0) {
+                System.out.println("¡ADVERTENCIA! Esta contraseña ha aparecido en " + pwnCount + " brechas de datos. NO LA USES.");
+            } else {
+                System.out.println("¡Buenas noticias! Esta contraseña no se ha encontrado en la base de datos de Have I Been Pwned.");
+            }
+        } catch (Exception e) {
+            System.out.println("No se pudo verificar la vulnerabilidad en línea: " + e.getMessage());
+        }
+    }
+
+    private static void opcionVerificarCorreo(Scanner scanner) {
+        System.out.print("\nIngrese el correo electrónico a verificar: ");
+        String email = scanner.nextLine();
+        
+        System.out.println("Consultando brechas de datos para " + email + "...");
+        try {
+            VulnerabilityCheck vulnCheck = new VulnerabilityCheck();
+            List<VulnerabilityCheck.BreachInfo> breaches = vulnCheck.checkEmail(email);
+
+            if (!breaches.isEmpty()) {
+                System.out.println("¡ALERTA! El correo " + email + " ha sido encontrado en " + breaches.size() + " brechas:");
+                for (VulnerabilityCheck.BreachInfo breach : breaches) {
+                    System.out.println("\n------------------------------------------------");
+                    System.out.println(breach);
+                }
+                System.out.println("------------------------------------------------");
+                System.out.println("\nSe recomienda cambiar la contraseña de este correo y de cualquier sitio donde la hayas usado.");
+            } else {
+                System.out.println("¡Buenas noticias! No se encontraron brechas asociadas a este correo.");
+            }
+        } catch (Exception e) {
+            System.out.println("Error al verificar el correo: " + e.getMessage());
+        }
     }
 
     private static boolean preguntarSiNo(Scanner scanner, String pregunta) {
