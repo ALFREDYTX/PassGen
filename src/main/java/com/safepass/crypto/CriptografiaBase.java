@@ -1,7 +1,6 @@
 package com.safepass.crypto;
 
 import java.security.MessageDigest;
-import java.util.Arrays;
 import javax.crypto.spec.SecretKeySpec;
 
 public abstract class CriptografiaBase {

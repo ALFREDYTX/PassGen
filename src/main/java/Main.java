@@ -265,7 +265,6 @@ public class Main {
     }
 
 
-
     private static void opcionEvaluar(Scanner scanner) {
         System.out.print("\nIngrese la contraseña a evaluar: ");
         String password = scanner.nextLine();

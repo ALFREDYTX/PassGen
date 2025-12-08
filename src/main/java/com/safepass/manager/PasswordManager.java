@@ -4,6 +4,8 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import com.safepass.excepciones.ManagerException;
+import com.safepass.crypto.EncriptadorCSV;
+import com.safepass.crypto.DesencriptadorCSV;
 
 public class PasswordManager implements IManager<PasswordEntry> {
 
@@ -52,34 +54,27 @@ public class PasswordManager implements IManager<PasswordEntry> {
 
     private String secretKey = "miSecreto123";
 
-    private javax.crypto.spec.SecretKeySpec generarClave(String password) throws Exception {
-        java.security.MessageDigest sha = java.security.MessageDigest.getInstance("SHA-256");
-        byte[] key = password.getBytes("UTF-8");
-        key = sha.digest(key);
-        return new javax.crypto.spec.SecretKeySpec(key, "AES");
-    }
+
 
     @Override
     public void guardarDatos(String archivo) throws ManagerException {
         try {
-            StringBuilder sb = new StringBuilder();
-            for (PasswordEntry entry : misPasswords) {
-                sb.append(entry.getSitio()).append(",")
-                  .append(entry.getUsuario()).append(",")
-                  .append(entry.getPassword()).append(",")
-                  .append(entry.getCategoria()).append(",")
-                  .append(entry.getFechaCreacion()).append("\n");
+            String archivoTemp = "temp_" + archivo;
+            try (PrintWriter writer = new PrintWriter(new FileWriter(archivoTemp))) {
+                for (PasswordEntry entry : misPasswords) {
+                    writer.println(entry.getSitio() + "," +
+                                   entry.getUsuario() + "," +
+                                   entry.getPassword() + "," +
+                                   entry.getCategoria() + "," +
+                                   entry.getFechaCreacion());
+                }
             }
-            byte[] inputBytes = sb.toString().getBytes("UTF-8");
 
-            javax.crypto.spec.SecretKeySpec key = generarClave(secretKey);
-            javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES");
-            cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, key);
-            byte[] outputBytes = cipher.doFinal(inputBytes);
+            EncriptadorCSV encriptador = new EncriptadorCSV();
+            encriptador.procesar(archivoTemp, archivo, secretKey);
 
-            try (FileOutputStream fos = new FileOutputStream(archivo)) {
-                fos.write(outputBytes);
-            }
+            new File(archivoTemp).delete();
+
             System.out.println("Datos guardados y encriptados en " + archivo);
 
         } catch (Exception e) {
@@ -92,40 +87,37 @@ public class PasswordManager implements IManager<PasswordEntry> {
         File f = new File(archivo);
         if (f.exists()) {
             try {
-                FileInputStream fis = new FileInputStream(archivo);
-                byte[] inputBytes = new byte[(int) f.length()];
-                fis.read(inputBytes);
-                fis.close();
+                String archivoTemp = "temp_dec_" + archivo;
+                DesencriptadorCSV desencriptador = new DesencriptadorCSV();
+                desencriptador.procesar(archivo, archivoTemp, secretKey);
 
-                javax.crypto.spec.SecretKeySpec key = generarClave(secretKey);
-                javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES");
-                cipher.init(javax.crypto.Cipher.DECRYPT_MODE, key);
-                byte[] decryptedBytes = cipher.doFinal(inputBytes);
-                
-                String csvContent = new String(decryptedBytes, "UTF-8");
-
-                misPasswords.clear();
-                String[] lines = csvContent.split("\n");
-                for (String line : lines) {
-                    if (line.trim().isEmpty()) continue;
-                    String[] parts = line.split(",");
-                    if (parts.length >= 4) {
-                        String sitio = parts[0];
-                        String usuario = parts[1];
-                        String password = parts[2];
-                        Categoria categoria = Categoria.valueOf(parts[3]);
-                        java.time.LocalDate fecha = java.time.LocalDate.now();
-                        
-                        if (parts.length >= 5) {
-                            try {
-                                fecha = java.time.LocalDate.parse(parts[4]);
-                            } catch (Exception e) {
+                try (BufferedReader br = new BufferedReader(new FileReader(archivoTemp))) {
+                    String line;
+                    misPasswords.clear();
+                    while ((line = br.readLine()) != null) {
+                        if (line.trim().isEmpty()) continue;
+                        String[] parts = line.split(",");
+                        if (parts.length >= 4) {
+                            String sitio = parts[0];
+                            String usuario = parts[1];
+                            String password = parts[2];
+                            Categoria categoria = Categoria.valueOf(parts[3]);
+                            java.time.LocalDate fecha = java.time.LocalDate.now();
+                            
+                            if (parts.length >= 5) {
+                                try {
+                                    fecha = java.time.LocalDate.parse(parts[4]);
+                                } catch (Exception e) {
+                                }
                             }
+                            
+                            misPasswords.add(new PasswordEntry(sitio, usuario, password, categoria, fecha));
                         }
-                        
-                        misPasswords.add(new PasswordEntry(sitio, usuario, password, categoria, fecha));
                     }
                 }
+
+                new File(archivoTemp).delete();
+
                 System.out.println("Datos cargados y desencriptados de " + archivo);
 
             } catch (Exception e) {
