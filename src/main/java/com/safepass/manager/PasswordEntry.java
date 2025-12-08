@@ -66,7 +66,7 @@ public class PasswordEntry implements Serializable, Cloneable {
 
     @Override
     public String toString() {
-        return "Sitio: " + sitio + " | Usuario: " + usuario + " | Cat: " + categoria + " | Fecha: " + fechaCreacion;
+        return "Sitio: " + sitio + " | Usuario: " + usuario + " | Password: " + password + " | Cat: " + categoria + " | Fecha: " + fechaCreacion;
     }
 
     @Override

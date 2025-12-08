@@ -9,7 +9,6 @@ public class ConfiguracionPassword implements Serializable {
     private boolean usarMayusculas;
 
     public ConfiguracionPassword() {
-        // Valores por defecto
         this.longitud = 8;
         this.usarSimbolos = false;
         this.usarNumeros = true;

@@ -7,10 +7,8 @@ import com.safepass.excepciones.ManagerException;
 
 public class PasswordManager implements IManager<PasswordEntry> {
 
-    // Singleton
     private static PasswordManager instance;
     
-    // Agregación/Colección
     private List<PasswordEntry> misPasswords;
 
     private PasswordManager() {
@@ -29,7 +27,6 @@ public class PasswordManager implements IManager<PasswordEntry> {
         if (elemento == null) {
             throw new ManagerException("No se puede agregar una entrada nula");
         }
-        // Validación simple: no duplicar sitio+usuario
         for (PasswordEntry entry : misPasswords) {
             if (entry.equals(elemento)) {
                 throw new ManagerException("La entrada para " + elemento.getSitio() + " ya existe");
@@ -65,7 +62,6 @@ public class PasswordManager implements IManager<PasswordEntry> {
     @Override
     public void guardarDatos(String archivo) throws ManagerException {
         try {
-            // 1. Generar contenido CSV en memoria
             StringBuilder sb = new StringBuilder();
             for (PasswordEntry entry : misPasswords) {
                 sb.append(entry.getSitio()).append(",")
@@ -76,13 +72,11 @@ public class PasswordManager implements IManager<PasswordEntry> {
             }
             byte[] inputBytes = sb.toString().getBytes("UTF-8");
 
-            // 2. Encriptar
             javax.crypto.spec.SecretKeySpec key = generarClave(secretKey);
             javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES");
             cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, key);
             byte[] outputBytes = cipher.doFinal(inputBytes);
 
-            // 3. Escribir a archivo
             try (FileOutputStream fos = new FileOutputStream(archivo)) {
                 fos.write(outputBytes);
             }
@@ -98,13 +92,11 @@ public class PasswordManager implements IManager<PasswordEntry> {
         File f = new File(archivo);
         if (f.exists()) {
             try {
-                // 1. Leer bytes encriptados
                 FileInputStream fis = new FileInputStream(archivo);
                 byte[] inputBytes = new byte[(int) f.length()];
                 fis.read(inputBytes);
                 fis.close();
 
-                // 2. Desencriptar
                 javax.crypto.spec.SecretKeySpec key = generarClave(secretKey);
                 javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES");
                 cipher.init(javax.crypto.Cipher.DECRYPT_MODE, key);
@@ -112,7 +104,6 @@ public class PasswordManager implements IManager<PasswordEntry> {
                 
                 String csvContent = new String(decryptedBytes, "UTF-8");
 
-                // 3. Parsear CSV
                 misPasswords.clear();
                 String[] lines = csvContent.split("\n");
                 for (String line : lines) {
@@ -129,7 +120,6 @@ public class PasswordManager implements IManager<PasswordEntry> {
                             try {
                                 fecha = java.time.LocalDate.parse(parts[4]);
                             } catch (Exception e) {
-                                // Fecha inválida, usar actual
                             }
                         }
                         

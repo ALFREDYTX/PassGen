@@ -19,7 +19,6 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
         PasswordManager manager = PasswordManager.getInstance();
 
-        // Cargar datos al inicio
         try {
             manager.cargarDatos(ARCHIVO_DATOS);
         } catch (ManagerException e) {
@@ -28,13 +27,12 @@ public class Main {
 
         boolean salir = false;
         while (!salir) {
-            System.out.println("\n=== SAFEPASS MENU ===");
+            System.out.println("\n=== SAFEPASS GENERATOR ===");
             System.out.println("1. Generar nueva contraseña");
             System.out.println("2. Ver contraseñas guardadas");
-            System.out.println("3. Modificar contraseña");
-            System.out.println("4. Eliminar contraseña");
-            System.out.println("5. Evaluar contraseña");
-            System.out.println("6. Salir");
+            System.out.println("3. Evaluar seguridad");
+            System.out.println("4. Gestor de Contraseñas (Modificar/Eliminar)");
+            System.out.println("5. Salir");
             System.out.print("Seleccione una opción: ");
 
             String input = scanner.nextLine();
@@ -47,15 +45,12 @@ public class Main {
                     opcionListar(manager);
                     break;
                 case "3":
-                    opcionModificar(scanner, manager);
-                    break;
-                case "4":
-                    opcionEliminar(scanner, manager);
-                    break;
-                case "5":
                     opcionEvaluar(scanner);
                     break;
-                case "6":
+                case "4":
+                    opcionGestor(scanner, manager);
+                    break;
+                case "5":
                     salir = true;
                     System.out.println("¡Hasta luego!");
                     break;
@@ -64,6 +59,38 @@ public class Main {
             }
         }
         scanner.close();
+    }
+
+    private static void opcionGestor(Scanner scanner, PasswordManager manager) {
+        boolean volver = false;
+        while (!volver) {
+            opcionListar(manager);
+            System.out.println("\n--- GESTOR DE CONTRASEÑAS ---");
+            System.out.println("1. Modificar contraseña");
+            System.out.println("2. Eliminar contraseña");
+            System.out.println("3. Mostrar contraseña real");
+            System.out.println("4. Volver al menú principal");
+            System.out.print("Seleccione una opción: ");
+
+            String input = scanner.nextLine();
+
+            switch (input) {
+                case "1":
+                    opcionModificar(scanner, manager);
+                    break;
+                case "2":
+                    opcionEliminar(scanner, manager);
+                    break;
+                case "3":
+                    opcionMostrarPassword(scanner, manager);
+                    break;
+                case "4":
+                    volver = true;
+                    break;
+                default:
+                    System.out.println("Opción no válida.");
+            }
+        }
     }
 
     private static void opcionGenerar(Scanner scanner, PasswordManager manager) {
@@ -77,7 +104,6 @@ public class Main {
             String password = "";
 
             if (tipo.equals("2")) {
-                // Generación de Frase
                 ConfiguracionFrase configFrase = new ConfiguracionFrase();
                 
                 System.out.print("Número de palabras (Enter para 4): ");
@@ -98,11 +124,9 @@ public class Main {
                 password = generadorFrase.generar(configFrase);
 
             } else {
-                // Generación Estándar
                 System.out.println("\n--- Configuración de Carácteres ---");
                 ConfiguracionPassword configPass = new ConfiguracionPassword();
                 
-                // 1. Longitud
                 System.out.print("Longitud (Enter para 12): ");
                 String lenStr = scanner.nextLine();
                 int longitud = 12;
@@ -115,7 +139,6 @@ public class Main {
                 }
                 configPass.setLongitud(longitud);
 
-                // 2. Opciones booleanas
                 configPass.setUsarMayusculas(preguntarSiNo(scanner, "¿Incluir Mayúsculas?"));
                 configPass.setUsarNumeros(preguntarSiNo(scanner, "¿Incluir Números?"));
                 configPass.setUsarSimbolos(preguntarSiNo(scanner, "¿Incluir Símbolos?"));
@@ -174,7 +197,6 @@ public class Main {
     }
 
     private static void opcionModificar(Scanner scanner, PasswordManager manager) {
-        opcionListar(manager);
         List<PasswordEntry> lista = manager.listar();
         if (lista.isEmpty()) return;
 
@@ -208,7 +230,6 @@ public class Main {
                     }
                 }
 
-                // Mantener la fecha de creación original
                 PasswordEntry nuevaEntrada = new PasswordEntry(sitio, usuario, password, categoria, actual.getFechaCreacion());
                 manager.modificar(indice, nuevaEntrada);
                 manager.guardarDatos(ARCHIVO_DATOS);
@@ -221,7 +242,6 @@ public class Main {
     }
 
     private static void opcionEliminar(Scanner scanner, PasswordManager manager) {
-        opcionListar(manager);
         List<PasswordEntry> lista = manager.listar();
         if (lista.isEmpty()) return;
 
@@ -234,6 +254,24 @@ public class Main {
                     manager.eliminar(aEliminar);
                     manager.guardarDatos(ARCHIVO_DATOS);
                 }
+            } else {
+                System.out.println("Índice inválido.");
+            }
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+
+    private static void opcionMostrarPassword(Scanner scanner, PasswordManager manager) {
+        List<PasswordEntry> lista = manager.listar();
+        if (lista.isEmpty()) return;
+
+        System.out.print("Ingrese el número de la entrada para ver la contraseña: ");
+        try {
+            int indice = Integer.parseInt(scanner.nextLine()) - 1;
+            if (indice >= 0 && indice < lista.size()) {
+                PasswordEntry entry = lista.get(indice);
+                System.out.println("\n>>> Contraseña para " + entry.getSitio() + ": " + entry.getPassword() + " <<<");
             } else {
                 System.out.println("Índice inválido.");
             }
