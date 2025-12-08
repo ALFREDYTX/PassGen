@@ -54,8 +54,6 @@ public class PasswordManager implements IManager<PasswordEntry> {
 
     private String secretKey = "miSecreto123";
 
-
-
     @Override
     public void guardarDatos(String archivo) throws ManagerException {
         try {
