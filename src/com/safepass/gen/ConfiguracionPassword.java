@@ -2,13 +2,13 @@ package com.safepass.gen;
 
 import java.io.Serializable;
 
-public class Configuracion implements Serializable {
+public class ConfiguracionPassword implements Serializable {
     private int longitud;
     private boolean usarSimbolos;
     private boolean usarNumeros;
     private boolean usarMayusculas;
 
-    public Configuracion() {
+    public ConfiguracionPassword() {
         // Valores por defecto
         this.longitud = 8;
         this.usarSimbolos = false;
@@ -16,7 +16,7 @@ public class Configuracion implements Serializable {
         this.usarMayusculas = true;
     }
 
-    public Configuracion(int longitud, boolean usarSimbolos, boolean usarNumeros, boolean usarMayusculas) {
+    public ConfiguracionPassword(int longitud, boolean usarSimbolos, boolean usarNumeros, boolean usarMayusculas) {
         this.longitud = longitud;
         this.usarSimbolos = usarSimbolos;
         this.usarNumeros = usarNumeros;
@@ -57,7 +57,7 @@ public class Configuracion implements Serializable {
 
     @Override
     public String toString() {
-        return "Configuracion [longitud=" + longitud + ", usarSimbolos=" + usarSimbolos + ", usarNumeros=" + usarNumeros
+        return "ConfiguracionPassword [longitud=" + longitud + ", usarSimbolos=" + usarSimbolos + ", usarNumeros=" + usarNumeros
                 + ", usarMayusculas=" + usarMayusculas + "]";
     }
 }

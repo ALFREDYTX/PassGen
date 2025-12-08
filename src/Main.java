@@ -1,98 +1,258 @@
 import com.safepass.gen.GeneradorPassword;
-import com.safepass.gen.Configuracion;
+import com.safepass.gen.GeneradorFrase;
+import com.safepass.gen.ConfiguracionPassword;
+import com.safepass.gen.ConfiguracionFrase;
 import com.safepass.misc.EvaluadorCalidad;
 import com.safepass.misc.NivelSeguridad;
-import com.safepass.excepciones.ConfiguracionInvalidaException;
-import com.safepass.crypto.EncriptadorCSV;
-import com.safepass.crypto.DesencriptadorCSV;
 import com.safepass.manager.PasswordManager;
 import com.safepass.manager.PasswordEntry;
 import com.safepass.manager.Categoria;
+import com.safepass.excepciones.ManagerException;
 
-import java.io.FileWriter;
-import java.io.IOException;
+import java.util.Scanner;
 import java.util.List;
 
 public class Main {
+    private static final String ARCHIVO_DATOS = "passwords.csv";
+
     public static void main(String[] args) {
-        // 1. Crear configuración
-        Configuracion config = new Configuracion();
-        config.setLongitud(12);
-        config.setUsarSimbolos(true);
-        config.setUsarNumeros(true);
-        config.setUsarMayusculas(true);
+        Scanner scanner = new Scanner(System.in);
+        PasswordManager manager = PasswordManager.getInstance();
 
-        System.out.println("Configuración usada: " + config.toString());
-
-        GeneradorPassword generador = new GeneradorPassword();
-        EvaluadorCalidad evaluador = new EvaluadorCalidad();
-
+        // Cargar datos al inicio
         try {
-            // 2. Generar contraseña
-            String password = generador.generar(config);
-            System.out.println("Contraseña generada: " + password);
+            manager.cargarDatos(ARCHIVO_DATOS);
+        } catch (ManagerException e) {
+            System.out.println("Nota: No se pudieron cargar datos previos (" + e.getMessage() + ")");
+        }
 
-            // 3. Evaluar calidad
+        boolean salir = false;
+        while (!salir) {
+            System.out.println("\n=== SAFEPASS MENU ===");
+            System.out.println("1. Generar nueva contraseña");
+            System.out.println("2. Ver contraseñas guardadas");
+            System.out.println("3. Modificar contraseña");
+            System.out.println("4. Eliminar contraseña");
+            System.out.println("5. Evaluar contraseña");
+            System.out.println("6. Salir");
+            System.out.print("Seleccione una opción: ");
+
+            String input = scanner.nextLine();
+            
+            switch (input) {
+                case "1":
+                    opcionGenerar(scanner, manager);
+                    break;
+                case "2":
+                    opcionListar(manager);
+                    break;
+                case "3":
+                    opcionModificar(scanner, manager);
+                    break;
+                case "4":
+                    opcionEliminar(scanner, manager);
+                    break;
+                case "5":
+                    opcionEvaluar(scanner);
+                    break;
+                case "6":
+                    salir = true;
+                    System.out.println("¡Hasta luego!");
+                    break;
+                default:
+                    System.out.println("Opción no válida.");
+            }
+        }
+        scanner.close();
+    }
+
+    private static void opcionGenerar(Scanner scanner, PasswordManager manager) {
+        try {
+            System.out.println("\n--- Generar Contraseña ---");
+            System.out.println("1. Contraseña Aleatoria (Carácteres)");
+            System.out.println("2. Frase de Contraseña (Palabras)");
+            System.out.print("Seleccione tipo (1/2): ");
+            String tipo = scanner.nextLine();
+
+            String password = "";
+
+            if (tipo.equals("2")) {
+                // Generación de Frase
+                ConfiguracionFrase configFrase = new ConfiguracionFrase();
+                
+                System.out.print("Número de palabras (Enter para 4): ");
+                String numStr = scanner.nextLine();
+                if (!numStr.trim().isEmpty()) {
+                    try {
+                        configFrase.setNumeroPalabras(Integer.parseInt(numStr));
+                    } catch (NumberFormatException e) {
+                        System.out.println("Valor no válido, usando 4.");
+                    }
+                }
+
+                System.out.print("Separador (Enter para '-'): ");
+                String separador = scanner.nextLine();
+                if (!separador.isEmpty()) configFrase.setSeparador(separador);
+
+                GeneradorFrase generadorFrase = new GeneradorFrase();
+                password = generadorFrase.generar(configFrase);
+
+            } else {
+                // Generación Estándar
+                System.out.println("\n--- Configuración de Carácteres ---");
+                ConfiguracionPassword configPass = new ConfiguracionPassword();
+                
+                // 1. Longitud
+                System.out.print("Longitud (Enter para 12): ");
+                String lenStr = scanner.nextLine();
+                int longitud = 12;
+                if (!lenStr.trim().isEmpty()) {
+                    try {
+                        longitud = Integer.parseInt(lenStr);
+                    } catch (NumberFormatException e) {
+                        System.out.println("Valor no válido, usando 12.");
+                    }
+                }
+                configPass.setLongitud(longitud);
+
+                // 2. Opciones booleanas
+                configPass.setUsarMayusculas(preguntarSiNo(scanner, "¿Incluir Mayúsculas?"));
+                configPass.setUsarNumeros(preguntarSiNo(scanner, "¿Incluir Números?"));
+                configPass.setUsarSimbolos(preguntarSiNo(scanner, "¿Incluir Símbolos?"));
+
+                GeneradorPassword generador = new GeneradorPassword();
+                password = generador.generar(configPass);
+            }
+            
+            EvaluadorCalidad evaluador = new EvaluadorCalidad();
             NivelSeguridad nivel = evaluador.evaluar(password);
+
+            System.out.println("\n------------------------------------------------");
+            System.out.println("Contraseña generada: " + password);
             System.out.println("Nivel de seguridad: " + nivel);
+            System.out.println("------------------------------------------------");
 
-            // 4. Guardar en archivo (Archivos y flujos)
-            guardarPassword(password, nivel);
+            if (preguntarSiNo(scanner, "¿Desea guardar esta contraseña?")) {
+                System.out.print("Ingrese el sitio web: ");
+                String sitio = scanner.nextLine();
+                
+                System.out.print("Ingrese el usuario: ");
+                String usuario = scanner.nextLine();
 
-            // 5. Encriptar el archivo
-            String claveSecreta = "miSecreto123";
-            EncriptadorCSV encriptador = new EncriptadorCSV();
-            encriptador.procesar("password.txt", "password.enc", claveSecreta);
+                System.out.println("Categorías: TRABAJO, PERSONAL, REDES_SOCIALES, BANCO, OTRO");
+                System.out.print("Ingrese la categoría: ");
+                String catStr = scanner.nextLine().toUpperCase();
+                
+                Categoria categoria;
+                try {
+                    categoria = Categoria.valueOf(catStr);
+                } catch (IllegalArgumentException e) {
+                    categoria = Categoria.OTRO;
+                    System.out.println("Categoría no válida, se asignó OTRO.");
+                }
 
-            // 6. Desencriptar el archivo (prueba)
-            DesencriptadorCSV desencriptador = new DesencriptadorCSV();
-            desencriptador.procesar("password.enc", "password_decrypted.txt", claveSecreta);
-
-            // --- NUEVO: GESTOR DE CONTRASEÑAS ---
-            System.out.println("\n--- GESTOR DE CONTRASEÑAS ---");
-            PasswordManager manager = PasswordManager.getInstance(); // Singleton
-
-            // Crear entradas (Agregación)
-            PasswordEntry entrada1 = new PasswordEntry("google.com", "usuario1", password, Categoria.PERSONAL);
-            PasswordEntry entrada2 = new PasswordEntry("banco.com", "admin", "SuperSecret123!", Categoria.BANCO);
-
-            // Agregar
-            manager.agregar(entrada1);
-            manager.agregar(entrada2);
-
-            // Guardar datos (Serialización)
-            manager.guardarDatos("mis_passwords.dat");
-
-            // Listar
-            System.out.println("Listado de contraseñas:");
-            List<PasswordEntry> lista = manager.listar(); // Colección genérica
-            for (PasswordEntry entry : lista) {
-                System.out.println(entry); // toString
+                PasswordEntry entrada = new PasswordEntry(sitio, usuario, password, categoria);
+                manager.agregar(entrada);
+                manager.guardarDatos(ARCHIVO_DATOS);
             }
 
-        } catch (ConfiguracionInvalidaException e) {
-            System.err.println("Error en la configuración: " + e.getMessage());
-        } catch (com.safepass.excepciones.ManagerException e) {
-            System.err.println("Error en el gestor de contraseñas: " + e.getMessage());
-        } catch (IOException e) {
-            System.err.println("Error al guardar el archivo: " + e.getMessage());
         } catch (Exception e) {
-            System.err.println("Ocurrió un error inesperado: " + e.getMessage());
-            e.printStackTrace();
+            System.out.println("Error al generar/guardar: " + e.getMessage());
         }
     }
 
-    // Método estático para guardar en archivo
-    public static void guardarPassword(String password, NivelSeguridad nivel) throws IOException {
-        FileWriter escritor = null;
-        try {
-            escritor = new FileWriter("password.txt", true); // true para append
-            escritor.write("Password: " + password + " | Nivel: " + nivel + "\n");
-            System.out.println("Contraseña guardada en password.txt");
-        } finally {
-            if (escritor != null) {
-                escritor.close();
+    private static void opcionListar(PasswordManager manager) {
+        System.out.println("\n--- Contraseñas Guardadas ---");
+        List<PasswordEntry> lista = manager.listar();
+        if (lista.isEmpty()) {
+            System.out.println("No hay contraseñas guardadas.");
+        } else {
+            for (int i = 0; i < lista.size(); i++) {
+                System.out.println((i + 1) + ". " + lista.get(i));
             }
         }
+    }
+
+    private static void opcionModificar(Scanner scanner, PasswordManager manager) {
+        opcionListar(manager);
+        List<PasswordEntry> lista = manager.listar();
+        if (lista.isEmpty()) return;
+
+        System.out.print("Ingrese el número de la entrada a modificar: ");
+        try {
+            int indice = Integer.parseInt(scanner.nextLine()) - 1;
+            if (indice >= 0 && indice < lista.size()) {
+                PasswordEntry actual = lista.get(indice);
+                System.out.println("Modificando: " + actual);
+
+                System.out.print("Nuevo sitio (Enter para mantener '" + actual.getSitio() + "'): ");
+                String sitio = scanner.nextLine();
+                if (sitio.isEmpty()) sitio = actual.getSitio();
+
+                System.out.print("Nuevo usuario (Enter para mantener '" + actual.getUsuario() + "'): ");
+                String usuario = scanner.nextLine();
+                if (usuario.isEmpty()) usuario = actual.getUsuario();
+
+                System.out.print("Nueva contraseña (Enter para mantener actual): ");
+                String password = scanner.nextLine();
+                if (password.isEmpty()) password = actual.getPassword();
+
+                System.out.print("Nueva categoría (Enter para mantener '" + actual.getCategoria() + "'): ");
+                String catStr = scanner.nextLine().toUpperCase();
+                Categoria categoria = actual.getCategoria();
+                if (!catStr.isEmpty()) {
+                    try {
+                        categoria = Categoria.valueOf(catStr);
+                    } catch (IllegalArgumentException e) {
+                        System.out.println("Categoría inválida, manteniendo la anterior.");
+                    }
+                }
+
+                // Mantener la fecha de creación original
+                PasswordEntry nuevaEntrada = new PasswordEntry(sitio, usuario, password, categoria, actual.getFechaCreacion());
+                manager.modificar(indice, nuevaEntrada);
+                manager.guardarDatos(ARCHIVO_DATOS);
+            } else {
+                System.out.println("Índice inválido.");
+            }
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+
+    private static void opcionEliminar(Scanner scanner, PasswordManager manager) {
+        opcionListar(manager);
+        List<PasswordEntry> lista = manager.listar();
+        if (lista.isEmpty()) return;
+
+        System.out.print("Ingrese el número de la entrada a eliminar: ");
+        try {
+            int indice = Integer.parseInt(scanner.nextLine()) - 1;
+            if (indice >= 0 && indice < lista.size()) {
+                PasswordEntry aEliminar = lista.get(indice);
+                if (preguntarSiNo(scanner, "¿Seguro que desea eliminar " + aEliminar.getSitio() + "?")) {
+                    manager.eliminar(aEliminar);
+                    manager.guardarDatos(ARCHIVO_DATOS);
+                }
+            } else {
+                System.out.println("Índice inválido.");
+            }
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+
+    private static void opcionEvaluar(Scanner scanner) {
+        System.out.print("\nIngrese la contraseña a evaluar: ");
+        String password = scanner.nextLine();
+        EvaluadorCalidad evaluador = new EvaluadorCalidad();
+        NivelSeguridad nivel = evaluador.evaluar(password);
+        System.out.println("Nivel de seguridad: " + nivel);
+    }
+
+    private static boolean preguntarSiNo(Scanner scanner, String pregunta) {
+        System.out.print(pregunta + " (S/n): ");
+        String input = scanner.nextLine().trim();
+        return !input.equalsIgnoreCase("n");
     }
 }

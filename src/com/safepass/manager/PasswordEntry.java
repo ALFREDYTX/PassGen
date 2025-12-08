@@ -3,17 +3,25 @@ package com.safepass.manager;
 import java.io.Serializable;
 import java.util.Objects;
 
+import java.time.LocalDate;
+
 public class PasswordEntry implements Serializable, Cloneable {
     private String sitio;
     private String usuario;
     private String password;
     private Categoria categoria;
+    private LocalDate fechaCreacion;
 
     public PasswordEntry(String sitio, String usuario, String password, Categoria categoria) {
+        this(sitio, usuario, password, categoria, LocalDate.now());
+    }
+
+    public PasswordEntry(String sitio, String usuario, String password, Categoria categoria, LocalDate fechaCreacion) {
         this.sitio = sitio;
         this.usuario = usuario;
         this.password = password;
         this.categoria = categoria;
+        this.fechaCreacion = fechaCreacion;
     }
 
     public String getSitio() {
@@ -48,9 +56,17 @@ public class PasswordEntry implements Serializable, Cloneable {
         this.categoria = categoria;
     }
 
+    public LocalDate getFechaCreacion() {
+        return fechaCreacion;
+    }
+
+    public void setFechaCreacion(LocalDate fechaCreacion) {
+        this.fechaCreacion = fechaCreacion;
+    }
+
     @Override
     public String toString() {
-        return "Sitio: " + sitio + " | Usuario: " + usuario + " | Cat: " + categoria;
+        return "Sitio: " + sitio + " | Usuario: " + usuario + " | Cat: " + categoria + " | Fecha: " + fechaCreacion;
     }
 
     @Override

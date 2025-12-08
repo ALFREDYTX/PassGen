@@ -42,7 +42,7 @@ public class GeneradorPassword {
         this.simbolos = simbolos;
     }
 
-    public String generar(Configuracion config) throws ConfiguracionInvalidaException {
+    public String generar(ConfiguracionPassword config) throws ConfiguracionInvalidaException {
         if (config.getLongitud() <= 0) {
             throw new ConfiguracionInvalidaException("La longitud debe ser mayor a 0");
         }

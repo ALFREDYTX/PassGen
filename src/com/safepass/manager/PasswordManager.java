@@ -53,35 +53,102 @@ public class PasswordManager implements IManager<PasswordEntry> {
         return misPasswords;
     }
 
+    private String secretKey = "miSecreto123";
+
+    private javax.crypto.spec.SecretKeySpec generarClave(String password) throws Exception {
+        java.security.MessageDigest sha = java.security.MessageDigest.getInstance("SHA-256");
+        byte[] key = password.getBytes("UTF-8");
+        key = sha.digest(key);
+        return new javax.crypto.spec.SecretKeySpec(key, "AES");
+    }
+
     @Override
     public void guardarDatos(String archivo) throws ManagerException {
         try {
-            FileOutputStream fos = new FileOutputStream(archivo);
-            ObjectOutputStream oos = new ObjectOutputStream(fos);
-            oos.writeObject(misPasswords);
-            oos.close();
-            fos.close();
-            System.out.println("Datos guardados en " + archivo);
-        } catch (IOException e) {
+            // 1. Generar contenido CSV en memoria
+            StringBuilder sb = new StringBuilder();
+            for (PasswordEntry entry : misPasswords) {
+                sb.append(entry.getSitio()).append(",")
+                  .append(entry.getUsuario()).append(",")
+                  .append(entry.getPassword()).append(",")
+                  .append(entry.getCategoria()).append(",")
+                  .append(entry.getFechaCreacion()).append("\n");
+            }
+            byte[] inputBytes = sb.toString().getBytes("UTF-8");
+
+            // 2. Encriptar
+            javax.crypto.spec.SecretKeySpec key = generarClave(secretKey);
+            javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES");
+            cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, key);
+            byte[] outputBytes = cipher.doFinal(inputBytes);
+
+            // 3. Escribir a archivo
+            try (FileOutputStream fos = new FileOutputStream(archivo)) {
+                fos.write(outputBytes);
+            }
+            System.out.println("Datos guardados y encriptados en " + archivo);
+
+        } catch (Exception e) {
             throw new ManagerException("Error al guardar datos: " + e.getMessage());
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public void cargarDatos(String archivo) throws ManagerException {
         File f = new File(archivo);
         if (f.exists()) {
             try {
+                // 1. Leer bytes encriptados
                 FileInputStream fis = new FileInputStream(archivo);
-                ObjectInputStream ois = new ObjectInputStream(fis);
-                misPasswords = (List<PasswordEntry>) ois.readObject();
-                ois.close();
+                byte[] inputBytes = new byte[(int) f.length()];
+                fis.read(inputBytes);
                 fis.close();
-                System.out.println("Datos cargados de " + archivo);
-            } catch (IOException | ClassNotFoundException e) {
+
+                // 2. Desencriptar
+                javax.crypto.spec.SecretKeySpec key = generarClave(secretKey);
+                javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES");
+                cipher.init(javax.crypto.Cipher.DECRYPT_MODE, key);
+                byte[] decryptedBytes = cipher.doFinal(inputBytes);
+                
+                String csvContent = new String(decryptedBytes, "UTF-8");
+
+                // 3. Parsear CSV
+                misPasswords.clear();
+                String[] lines = csvContent.split("\n");
+                for (String line : lines) {
+                    if (line.trim().isEmpty()) continue;
+                    String[] parts = line.split(",");
+                    if (parts.length >= 4) {
+                        String sitio = parts[0];
+                        String usuario = parts[1];
+                        String password = parts[2];
+                        Categoria categoria = Categoria.valueOf(parts[3]);
+                        java.time.LocalDate fecha = java.time.LocalDate.now();
+                        
+                        if (parts.length >= 5) {
+                            try {
+                                fecha = java.time.LocalDate.parse(parts[4]);
+                            } catch (Exception e) {
+                                // Fecha inválida, usar actual
+                            }
+                        }
+                        
+                        misPasswords.add(new PasswordEntry(sitio, usuario, password, categoria, fecha));
+                    }
+                }
+                System.out.println("Datos cargados y desencriptados de " + archivo);
+
+            } catch (Exception e) {
                 throw new ManagerException("Error al cargar datos: " + e.getMessage());
             }
         }
+    }
+
+    public void modificar(int indice, PasswordEntry nuevaEntrada) throws ManagerException {
+        if (indice < 0 || indice >= misPasswords.size()) {
+            throw new ManagerException("Índice inválido");
+        }
+        misPasswords.set(indice, nuevaEntrada);
+        System.out.println("Entrada modificada exitosamente.");
     }
 }
