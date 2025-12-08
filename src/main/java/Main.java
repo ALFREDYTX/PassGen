@@ -28,7 +28,7 @@ public class Main {
 
         boolean salir = false;
         while (!salir) {
-            System.out.println("\n=== SAFEPASS GENERATOR ===");
+            System.out.println("\nSAFEPASS GENERATOR");
             System.out.println("1. Generar nueva contraseña");
             System.out.println("2. Ver contraseñas guardadas");
             System.out.println("3. Evaluar seguridad (Local)");
@@ -61,7 +61,6 @@ public class Main {
                     break;
                 case "7":
                     salir = true;
-                    System.out.println("¡Hasta luego!");
                     break;
                 default:
                     System.out.println("Opción no válida.");
@@ -74,11 +73,10 @@ public class Main {
         boolean volver = false;
         while (!volver) {
             opcionListar(manager);
-            System.out.println("\n--- GESTOR DE CONTRASEÑAS ---");
+            System.out.println("\nGESTOR DE CONTRASEÑAS");
             System.out.println("1. Modificar contraseña");
             System.out.println("2. Eliminar contraseña");
-            System.out.println("3. Mostrar contraseña real");
-            System.out.println("4. Volver al menú principal");
+            System.out.println("3. Volver al menú principal");
             System.out.print("Seleccione una opción: ");
 
             String input = scanner.nextLine();
@@ -91,9 +89,6 @@ public class Main {
                     opcionEliminar(scanner, manager);
                     break;
                 case "3":
-                    opcionMostrarPassword(scanner, manager);
-                    break;
-                case "4":
                     volver = true;
                     break;
                 default:
@@ -104,7 +99,7 @@ public class Main {
 
     private static void opcionGenerar(Scanner scanner, PasswordManager manager) {
         try {
-            System.out.println("\n--- Generar Contraseña ---");
+            System.out.println("\nGenerar Contraseña");
             System.out.println("1. Contraseña Aleatoria (Carácteres)");
             System.out.println("2. Frase de Contraseña (Palabras)");
             System.out.print("Seleccione tipo (1/2): ");
@@ -133,7 +128,7 @@ public class Main {
                 password = generadorFrase.generar(configFrase);
 
             } else {
-                System.out.println("\n--- Configuración de Carácteres ---");
+                System.out.println("\nConfiguración de Carácteres");
                 ConfiguracionPassword configPass = new ConfiguracionPassword();
                 
                 System.out.print("Longitud (Enter para 12): ");
@@ -159,10 +154,8 @@ public class Main {
             EvaluadorCalidad evaluador = new EvaluadorCalidad();
             NivelSeguridad nivel = evaluador.evaluar(password);
 
-            System.out.println("\n------------------------------------------------");
             System.out.println("Contraseña generada: " + password);
             System.out.println("Nivel de seguridad: " + nivel);
-            System.out.println("------------------------------------------------");
 
             if (preguntarSiNo(scanner, "¿Desea guardar esta contraseña?")) {
                 System.out.print("Ingrese el sitio web: ");
@@ -194,7 +187,7 @@ public class Main {
     }
 
     private static void opcionListar(PasswordManager manager) {
-        System.out.println("\n--- Contraseñas Guardadas ---");
+        System.out.println("\nContraseñas Guardadas");
         List<PasswordEntry> lista = manager.listar();
         if (lista.isEmpty()) {
             System.out.println("No hay contraseñas guardadas.");
@@ -271,23 +264,7 @@ public class Main {
         }
     }
 
-    private static void opcionMostrarPassword(Scanner scanner, PasswordManager manager) {
-        List<PasswordEntry> lista = manager.listar();
-        if (lista.isEmpty()) return;
 
-        System.out.print("Ingrese el número de la entrada para ver la contraseña: ");
-        try {
-            int indice = Integer.parseInt(scanner.nextLine()) - 1;
-            if (indice >= 0 && indice < lista.size()) {
-                PasswordEntry entry = lista.get(indice);
-                System.out.println("\n>>> Contraseña para " + entry.getSitio() + ": " + entry.getPassword() + " <<<");
-            } else {
-                System.out.println("Índice inválido.");
-            }
-        } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
-        }
-    }
 
     private static void opcionEvaluar(Scanner scanner) {
         System.out.print("\nIngrese la contraseña a evaluar: ");
@@ -305,9 +282,9 @@ public class Main {
             VulnerabilityCheck vulnCheck = new VulnerabilityCheck();
             int pwnCount = vulnCheck.checkPassword(password);
             if (pwnCount > 0) {
-                System.out.println("¡ADVERTENCIA! Esta contraseña ha aparecido en " + pwnCount + " brechas de datos. NO LA USES.");
+                System.out.println("Esta contraseña ha aparecido en " + pwnCount + " brechas de datos.");
             } else {
-                System.out.println("¡Buenas noticias! Esta contraseña no se ha encontrado en la base de datos de Have I Been Pwned.");
+                System.out.println("Esta contraseña no se ha encontrado en la base de datos de Have I Been Pwned.");
             }
         } catch (Exception e) {
             System.out.println("No se pudo verificar la vulnerabilidad en línea: " + e.getMessage());
@@ -324,15 +301,13 @@ public class Main {
             List<VulnerabilityCheck.BreachInfo> breaches = vulnCheck.checkEmail(email);
 
             if (!breaches.isEmpty()) {
-                System.out.println("¡ALERTA! El correo " + email + " ha sido encontrado en " + breaches.size() + " brechas:");
+                System.out.println("El correo " + email + " ha sido encontrado en " + breaches.size() + " brechas:");
                 for (VulnerabilityCheck.BreachInfo breach : breaches) {
-                    System.out.println("\n------------------------------------------------");
                     System.out.println(breach);
                 }
-                System.out.println("------------------------------------------------");
                 System.out.println("\nSe recomienda cambiar la contraseña de este correo y de cualquier sitio donde la hayas usado.");
             } else {
-                System.out.println("¡Buenas noticias! No se encontraron brechas asociadas a este correo.");
+                System.out.println("No se encontraron brechas asociadas a este correo.");
             }
         } catch (Exception e) {
             System.out.println("Error al verificar el correo: " + e.getMessage());
